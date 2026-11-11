@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이터 모델링 이해 퀴즈</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --surface:#121214;
+    --surface-2:#18181b;
+    --surface-3:#202024;
+    --line:#26262a;
+    --line-strong:#3a3a40;
+    --text:#ededed;
+    --text-2:#a1a1a7;
+    --text-3:#68686f;
+    --white:#ffffff;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --serif:'Instrument Serif', 'Times New Roman', serif;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 64px;position:relative;overflow-x:hidden}
+  ::selection{background:#fff;color:#000}
+
+  /* ── background: grid + glow + grain ── */
+  .bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+    -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);}
+  .bg-glow{position:fixed;left:50%;top:-320px;width:900px;height:600px;transform:translateX(-50%);pointer-events:none;z-index:0;
+    background:radial-gradient(closest-side, rgba(255,255,255,.07), transparent);filter:blur(10px)}
+  .bg-grain{position:fixed;inset:-50%;pointer-events:none;z-index:100;opacity:.06;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .wrap{width:100%;max-width:740px;position:relative;z-index:1}
+
+  /* ── header ── */
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase}
+  .brand .mark{width:22px;height:22px;border:1px solid var(--line-strong);border-radius:6px;display:grid;place-items:center}
+  .brand .mark i{width:8px;height:8px;border:1px solid var(--white);border-radius:2px;display:block;position:relative}
+  .brand .mark i::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:1px;background:var(--text-2)}
+  .counter{font-family:var(--mono);font-size:12px;color:var(--text-3);letter-spacing:.04em}
+  .counter b{color:var(--white);font-weight:500}
+
+  /* ── segmented progress ── */
+  .segments{display:grid;grid-template-columns:repeat(20,1fr);gap:4px;margin-bottom:28px;height:4px}
+  .segments i{display:block;border-radius:2px;background:var(--line);transition:background .4s var(--ease), box-shadow .4s}
+  .segments i.done{background:var(--white)}
+  .segments i.retry{background:var(--text-3)}
+  .segments i.now{background:var(--line-strong);box-shadow:0 0 0 1px var(--text-2) inset}
+
+  /* ── card ── */
+  .card{position:relative;border-radius:22px;padding:44px 42px 36px;
+    background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 40%), var(--surface);
+    border:1px solid var(--line);
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 40px 80px -30px rgba(0,0,0,.8);
+    overflow:hidden; isolation:isolate}
+  .card::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .4s;
+    background:radial-gradient(420px circle at var(--mx,50%) var(--my,0%), rgba(255,255,255,.055), transparent 60%)}
+  .card:hover::before{opacity:1}
+  .card::after{content:"";position:absolute;left:42px;right:42px;top:0;height:1px;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)}
+  @media (max-width:560px){.card{padding:32px 22px 26px}.card::after{left:22px;right:22px}}
+
+  /* ── intro ── */
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--text-3);text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .eyebrow::before{content:"";width:18px;height:1px;background:var(--text-3)}
+  .intro h1{font-family:var(--serif);font-weight:400;font-size:64px;line-height:.98;letter-spacing:-.02em;margin-bottom:10px}
+  .intro h1 em{font-style:italic;color:var(--text-2)}
+  .intro .ko{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-bottom:16px}
+  .intro p{color:var(--text-2);line-height:1.75;font-size:15px;max-width:520px;word-break:keep-all}
+  @media (max-width:560px){.intro h1{font-size:46px}}
+
+  .erd{margin:34px 0 30px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2);padding:18px;position:relative;overflow:hidden}
+  .erd svg{display:block;width:100%;height:auto}
+  .erd .cap{position:absolute;right:14px;bottom:10px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text-3)}
+  .erd .flow{stroke-dasharray:4 5;animation:dash 1.6s linear infinite}
+  @keyframes dash{to{stroke-dashoffset:-18}}
+
+  .meta{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:14px;margin-bottom:30px;overflow:hidden}
+  .meta div{padding:16px 18px;border-right:1px solid var(--line)}
+  .meta div:last-child{border-right:0}
+  .meta span{display:block;font-family:var(--mono);font-size:10px;color:var(--text-3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+  .meta strong{font-family:var(--serif);font-size:28px;font-weight:400;line-height:1}
+  .meta strong.ko{font-family:inherit;font-size:17px;font-weight:600;line-height:1.65}
+  .intro-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .topics{display:flex;flex-wrap:wrap;gap:6px;margin-top:26px;padding-top:22px;border-top:1px dashed var(--line)}
+  .chip{font-size:12px;color:var(--text-2);border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:5px 11px}
+
+  /* ── question ── */
+  .q-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+  .q-tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);border:1px solid var(--line-strong);border-radius:999px;padding:5px 12px 5px 10px}
+  .q-tag::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--white)}
+  .q-big{font-family:var(--serif);font-style:italic;font-size:88px;line-height:.7;color:transparent;-webkit-text-stroke:1px var(--line-strong);
+    position:absolute;right:36px;top:34px;pointer-events:none;user-select:none;letter-spacing:-.03em}
+  @media (max-width:560px){.q-big{font-size:64px;right:20px;top:28px}}
+  .q-num{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--text-3);margin-bottom:10px}
+  .q-text{font-size:21px;font-weight:600;line-height:1.6;letter-spacing:-.015em;word-break:keep-all;max-width:580px}
+  .q-ctx{margin:22px 0 0;border:1px solid var(--line);border-radius:12px;background:#0e0e10;overflow:hidden}
+  .q-ctx .bar{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .q-ctx .bar i{width:7px;height:7px;border-radius:50%;background:var(--line-strong)}
+  .q-ctx pre{margin:0;padding:14px 18px;font-family:var(--mono);font-size:13px;line-height:1.8;color:var(--text-2);white-space:pre-wrap}
+  .q-ctx pre .h{color:var(--white)}
+
+  .options{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:28px}
+  .options li{opacity:0;transform:translateY(6px);animation:rise .45s var(--ease) forwards}
+  .options li:nth-child(2){animation-delay:.05s}.options li:nth-child(3){animation-delay:.1s}.options li:nth-child(4){animation-delay:.15s}
+  .opt{position:relative;display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:rgba(255,255,255,.012);color:var(--text);
+    border:1px solid var(--line);border-radius:14px;padding:17px 18px;font:inherit;font-size:15px;line-height:1.55;cursor:pointer;overflow:hidden;
+    transition:border-color .2s, background .2s, color .2s, transform .2s var(--ease);word-break:keep-all}
+  .opt::before{content:"";position:absolute;left:0;top:50%;width:2px;height:0;background:var(--white);transform:translateY(-50%);transition:height .25s var(--ease)}
+  .opt:hover:not(:disabled){border-color:var(--line-strong);background:var(--surface-2);transform:translateX(2px)}
+  .opt:hover:not(:disabled)::before{height:60%}
+  .opt:disabled{cursor:default}
+  .opt .key{flex:none;width:26px;height:26px;border-radius:8px;border:1px solid var(--line-strong);display:grid;place-items:center;
+    font-family:var(--mono);font-size:11px;color:var(--text-2);transition:all .2s}
+  .opt .txt{padding-top:1px;flex:1}
+  .opt .mark{flex:none;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--text-3);padding-top:4px;opacity:0;transition:opacity .2s}
+  .opt.correct{border-color:var(--white);background:linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.015))}
+  .opt.correct::before{height:100%}
+  .opt.correct .key{background:var(--white);color:#000;border-color:var(--white)}
+  .opt.correct .mark{opacity:1;color:var(--white)}
+  .opt.wrong{border-color:var(--line);color:var(--text-3);animation:shake .35s}
+  .opt.wrong .txt{text-decoration:line-through;text-decoration-color:var(--text-3)}
+  .opt.wrong .key{border-style:dashed;color:var(--text-3)}
+  .opt.wrong .mark{opacity:1}
+  .opt.dim{color:var(--text-3);border-color:var(--line);background:transparent}
+  @keyframes shake{20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
+
+  .feedback{margin-top:22px;display:none;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);padding:18px 20px}
+  .feedback.show{display:block;animation:rise .35s var(--ease)}
+  .feedback.ok{border-color:var(--line-strong)}
+  .verdict{font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;letter-spacing:.01em}
+  .verdict .dot{width:7px;height:7px;border-radius:50%;background:var(--white);box-shadow:0 0 0 4px rgba(255,255,255,.08)}
+  .verdict.no .dot{background:transparent;border:1px solid var(--text-2);box-shadow:none}
+  .verdict.no{color:var(--text-2)}
+  .explain{color:var(--text-2);font-size:14px;line-height:1.8;word-break:keep-all;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+  .explain b{color:var(--text);font-weight:600}
+
+  .actions{display:flex;justify-content:space-between;align-items:center;margin-top:28px;gap:12px}
+  .actions .left{display:flex;align-items:center;gap:14px}
+  .hint{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--text-3)}
+  .hint kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--text-2)}
+  @media (max-width:560px){.hint{display:none}}
+
+  .btn{position:relative;display:inline-flex;align-items:center;gap:10px;font:inherit;font-size:14px;font-weight:600;border-radius:999px;padding:12px 22px;cursor:pointer;
+    transition:transform .2s var(--ease), opacity .2s, background .2s, border-color .2s;overflow:hidden}
+  .btn .arr{transition:transform .25s var(--ease);font-family:var(--mono);font-weight:400}
+  .btn:hover:not(:disabled) .arr{transform:translateX(3px)}
+  .btn-primary{background:var(--white);color:#000;border:1px solid var(--white)}
+  .btn-primary::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(100deg, transparent, rgba(0,0,0,.08), transparent);transform:skewX(-20deg)}
+  .btn-primary:hover:not(:disabled)::after{animation:shine .8s var(--ease)}
+  .btn-primary:active:not(:disabled){transform:scale(.98)}
+  .btn-primary:disabled{background:transparent;color:var(--text-3);border-color:var(--line);cursor:not-allowed}
+  .btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--line-strong)}
+  .btn-ghost:hover{color:var(--text);border-color:var(--text-3);background:var(--surface-2)}
+  .btn-ghost .ic{font-family:var(--mono);font-size:13px}
+  @keyframes shine{to{left:130%}}
+
+  /* ── result ── */
+  .result{text-align:center}
+  .ring{position:relative;width:200px;height:200px;margin:8px auto 22px}
+  .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring .track{stroke:var(--line)}
+  .ring .val{stroke:var(--white);stroke-linecap:round;transition:stroke-dashoffset 1.4s var(--ease)}
+  .ring .ticks{stroke:var(--line-strong)}
+  .ring .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .num{font-family:var(--serif);font-size:72px;line-height:.9;letter-spacing:-.03em}
+  .ring .of{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--text-3);margin-top:8px}
+  .result .label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--text-3);text-transform:uppercase}
+  .grade{font-family:var(--serif);font-style:italic;font-size:26px;color:var(--text);margin-bottom:6px}
+  .grade-ko{color:var(--text-2);font-size:14px;margin-bottom:28px;word-break:keep-all}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 28px}
+  .stats div{padding:14px;border-right:1px solid var(--line)}
+  .stats div:last-child{border-right:0}
+  .stats span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:4px}
+  .stats strong{font-family:var(--serif);font-size:28px;font-weight:400}
+  .result .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .review{text-align:left;margin-top:34px;padding-top:26px;border-top:1px dashed var(--line)}
+  .review h3{font-family:var(--mono);font-size:11px;letter-spacing:.14em;font-weight:500;color:var(--text-3);text-transform:uppercase;margin-bottom:14px}
+  .r-item{display:grid;grid-template-columns:44px 1fr;gap:4px 12px;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:10px;background:var(--surface-2);
+    opacity:0;animation:rise .45s var(--ease) forwards}
+  .r-item .n{grid-row:span 2;font-family:var(--serif);font-style:italic;font-size:30px;line-height:1;color:var(--text-3)}
+  .r-item .rq{font-size:14px;font-weight:600;line-height:1.6;word-break:keep-all}
+  .r-item .ra{font-size:13px;color:var(--text-2);line-height:1.7;margin-top:6px}
+  .r-item .ra s{color:var(--text-3)}
+  .r-item .ra .lb{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text-3);margin-right:6px}
+  .perfect{color:var(--text-2);font-size:14px}
+
+  footer{margin-top:28px;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--text-3);line-height:1.6}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .anim{animation:rise .5s var(--ease)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.options li,.r-item{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="bg-grain"></div>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="mark"><i></i></span>Data Modeling · Quiz</div>
+    <div class="counter" id="counter"></div>
+  </header>
+  <div class="segments" id="segments"></div>
+  <main id="app"></main>
+  <footer>REF — 정미나. 2024. 유선배 SQL개발자(SQLD) 과외노트. 시대에듀</footer>
+</div>
+
+<script>
+const QUIZ = [
+  {
+    tag:"모델링 단계",
+    q:"쇼핑몰 구축 초기, 특정 DBMS나 테이블 구조는 고려하지 않고 '고객 · 주문 · 상품'과 이들 사이의 관계만 큰 그림으로 정의했다. 이 작업은 어느 단계인가?",
+    o:["물리적 모델링","논리적 모델링","개념적 모델링","정규화 단계"],
+    a:2,
+    e:"핵심 엔티티와 관계를 추상적으로 도출하는 첫 단계는 <b>개념적 모델링</b>이다. 순서는 개념적 → 논리적 → 물리적이며, DBMS 특성까지 반영하는 것은 물리적 모델링이다."
+  },
+  {
+    tag:"모델링 관점",
+    q:"'회원 엔티티에는 이름, 연락처, 가입일자를 저장해야 한다'를 결정하는 것은 모델링의 세 가지 관점 중 무엇에 해당하는가?",
+    o:["데이터 관점 (What)","프로세스 관점 (How)","상호작용 관점 (Interaction)","물리 관점 (Where)"],
+    a:0,
+    e:"<b>무엇을</b> 저장할지 정하는 것은 데이터 관점(What)이다. 업무를 어떻게 처리하는지는 프로세스(How), 데이터와 프로세스가 서로 어떤 영향을 주는지는 상호작용 관점이다."
+  },
+  {
+    tag:"엔티티 특성",
+    q:"사내 시스템에 '대표이사' 엔티티를 만들어 현재 대표이사 1명의 정보만 저장하려 한다. 엔티티 설계 관점에서 가장 큰 문제는?",
+    o:["속성이 1개 이상 있어야 한다는 특성 위반","2개 이상의 인스턴스가 있어야 한다는 특성 위반","엔티티 이름이 단수 명사가 아님","PK가 복합식별자여야 함"],
+    a:1,
+    e:"엔티티는 <b>2개 이상의 인스턴스</b>를 가져야 한다. 인스턴스가 하나뿐이라면 독립 엔티티보다는 다른 엔티티(예: 사원)의 속성이나 코드로 다루는 것이 적절하다."
+  },
+  {
+    tag:"명명 규칙",
+    q:"다음 중 엔티티 명명 규칙에 가장 잘 맞는 이름은?",
+    o:["ORDER LIST","고객들","상품","회원 정보 테이블"],
+    a:2,
+    e:"엔티티 이름은 <b>업무 용어, 단수 명사, 띄어쓰기 없음</b>이 원칙이다. 'ORDER LIST'와 '회원 정보 테이블'은 띄어쓰기가 있고, '고객들'은 복수형이다."
+  },
+  {
+    tag:"속성 원칙",
+    q:"회원 엔티티의 '취미' 속성 하나에 다음과 같이 값을 저장했다. 어떤 원칙을 위반했는가?",
+    ctx:"회원번호: 1001\n취미: \"독서, 등산, 요리\"",
+    o:["한 엔티티는 2개 이상의 인스턴스를 가진다","한 인스턴스는 여러 속성을 가진다","엔티티는 다른 엔티티와 관계를 가진다","한 속성은 하나의 속성값을 가진다"],
+    a:3,
+    e:"<b>한 속성은 하나의 값</b>만 가져야 한다. 취미가 여러 개라면 별도의 '회원취미' 엔티티로 분리하는 것이 맞다."
+  },
+  {
+    tag:"PK · FK · 일반속성",
+    q:"다음 수강신청 엔티티에서 '학번'의 역할은?",
+    ctx:"수강신청\n #수강신청번호\n *학번\n *과목코드\n *신청일자\n *성적",
+    o:["기본키(PK)","외래키(FK)","일반 속성","보조식별자"],
+    a:1,
+    e:"학번은 '학생' 엔티티의 PK를 참조하는 값이므로 수강신청 입장에서는 <b>외래키(FK)</b>다. 수강신청번호가 PK, 신청일자·성적은 일반 속성이다."
+  },
+  {
+    tag:"주식별자 특성",
+    q:"회원 엔티티의 PK로 '휴대폰번호'를 사용하기로 했다. 번호 변경이 잦다는 점에서 위반되는 주식별자 특성은?",
+    o:["유일성","최소성","불변성","존재성"],
+    a:2,
+    e:"주식별자는 한번 부여되면 바뀌지 않아야 한다(<b>불변성</b>). 휴대폰번호는 변경될 수 있어 PK로 부적절하다."
+  },
+  {
+    tag:"주식별자 특성",
+    q:"학생 엔티티의 PK를 (학번 + 이름)으로 정했다. 그런데 학번만으로도 모든 학생을 구분할 수 있다. 위반된 특성은?",
+    o:["유일성","최소성","불변성","존재성"],
+    a:1,
+    e:"주식별자는 인스턴스를 구분하는 데 필요한 <b>최소한의 속성</b>으로 구성해야 한다(최소성). 이름은 불필요하게 추가된 속성이다."
+  },
+  {
+    tag:"주식별자 특성",
+    q:"회원 PK를 '이메일'로 설계했는데, 휴대폰 인증만으로 가입한 회원은 이메일이 없다. 이 설계가 위반하는 특성은?",
+    o:["유일성","최소성","불변성","존재성"],
+    a:3,
+    e:"주식별자는 반드시 값이 있어야 한다(<b>존재성</b>, NULL 불가). 이메일이 없는 회원이 생길 수 있다면 PK가 될 수 없다."
+  },
+  {
+    tag:"식별자 분류",
+    q:"회원 엔티티는 회원번호를 PK로 쓴다. 그런데 '아이디'도 회원마다 유일해서 인스턴스 구분에 쓸 수 있다. 아이디는 어떤 식별자인가?",
+    o:["보조식별자","외부식별자","복합식별자","대리식별자"],
+    a:0,
+    e:"주식별자 외에 인스턴스를 유일하게 구분할 수 있는 속성은 <b>보조식별자(Alternate Identifier)</b>다."
+  },
+  {
+    tag:"식별자 분류",
+    q:"개인정보 보호를 위해 주민등록번호 대신 1, 2, 3 … 자동 증가 번호(auto_increment)를 회원 PK로 사용했다. 이 PK는?",
+    o:["원조(본질)식별자","외부식별자","대리식별자","보조식별자"],
+    a:2,
+    e:"현실에 원래 존재하지 않고 시스템이 인위적으로 만든 식별자는 <b>대리식별자(Surrogate)</b>다. 주민등록번호처럼 현실에 존재하는 것은 원조식별자다."
+  },
+  {
+    tag:"카디널리티",
+    q:"병원 시스템에서 한 진료과에는 여러 의사가 소속되고, 의사는 하나의 진료과에만 소속된다. '진료과 : 의사'의 관계는?",
+    o:["1 : 1","1 : N","N : 1","N : M"],
+    a:1,
+    e:"진료과 1개에 의사 N명이 대응하므로 진료과 : 의사 = <b>1 : N</b>이다. 그래서 FK(진료과번호)는 N쪽인 의사 엔티티에 들어간다."
+  },
+  {
+    tag:"카디널리티",
+    q:"한 사원은 사원증을 하나만 발급받고, 한 사원증은 한 명의 사원에게만 발급된다. '사원 : 사원증'의 관계는?",
+    o:["1 : 1","1 : N","N : 1","N : M"],
+    a:0,
+    e:"양쪽 모두 상대 쪽 하나에만 대응하므로 <b>1 : 1</b> 관계다. 온라인 쇼핑몰의 '주문 : 배송'도 같은 형태다."
+  },
+  {
+    tag:"N:M 해소",
+    q:"한 배우는 여러 영화에 출연하고, 한 영화에는 여러 배우가 출연한다. 이 관계를 데이터베이스로 구현하는 가장 적절한 방법은?",
+    o:["배우 엔티티에 영화번호(FK)를 추가한다","영화 엔티티에 배우번호(FK)를 추가한다","'출연' 교차 엔티티를 두고 배우(1):출연(N), 영화(1):출연(N)으로 분해한다","배우와 영화를 하나의 엔티티로 합친다"],
+    a:2,
+    e:"N:M 관계는 FK 하나로 표현할 수 없다. <b>교차(연결) 엔티티</b>를 만들어 1:N 두 개로 분해해야 한다. 쇼핑몰의 '주문상품', 수강 시스템의 '수강신청'과 같은 원리다."
+  },
+  {
+    tag:"교차 엔티티",
+    q:"학생과 과목은 N:M 관계다. '어떤 학생이 어떤 과목에서 받은 성적'을 저장하려면 '성적' 속성은 어느 엔티티에 두어야 하는가?",
+    o:["학생","과목","학과","수강신청"],
+    a:3,
+    e:"성적은 특정 학생과 특정 과목이 <b>만났을 때</b> 생기는 값이다. 따라서 둘을 연결하는 교차 엔티티인 수강신청에 둔다. 교차 엔티티는 관계에 딸린 추가 정보를 저장하는 역할도 한다."
+  },
+  {
+    tag:"식별자 관계",
+    q:"주문상품 엔티티의 PK가 다음과 같다. '주문 → 주문상품'의 관계는?",
+    ctx:"주문상품\n #주문번호 (FK)\n #상품번호 (FK)\n *수량\n *단가",
+    o:["식별자 관계 — 부모의 PK가 자식의 PK에 포함됨","비식별자 관계 — 부모의 PK가 자식의 일반 속성으로만 쓰임","1 : 1 관계","관계가 없음"],
+    a:0,
+    e:"부모(주문)의 PK인 주문번호가 자식(주문상품)의 <b>PK 일부</b>로 쓰이므로 식별자 관계다. 주문 없이는 주문상품이 존재할 수 없다."
+  },
+  {
+    tag:"비식별자 관계",
+    q:"주문 엔티티가 다음과 같이 설계되어 있다. '회원 → 주문'의 관계는?",
+    ctx:"주문\n #주문번호\n *회원번호 (FK)\n *주문일시\n *총금액",
+    o:["식별자 관계","비식별자 관계","N : M 관계","재귀 관계"],
+    a:1,
+    e:"회원번호가 FK로 들어오지만 주문의 PK에는 포함되지 않는다. 주문번호만으로 주문을 식별하므로 <b>비식별자 관계</b>다. 식별자/비식별자의 기준은 '부모 PK가 자식 PK에 포함되는가'이다."
+  },
+  {
+    tag:"내부 · 외부식별자",
+    q:"게시판의 댓글 엔티티 PK가 (게시글번호 + 댓글순번)이다. 여기서 '게시글번호'는 어떤 식별자인가?",
+    o:["내부식별자","대리식별자","외부식별자","보조식별자"],
+    a:2,
+    e:"부모 엔티티(게시글)의 식별자를 상속받은 것이므로 <b>외부식별자</b>다. 또한 두 속성을 조합하므로 댓글의 PK 전체는 복합식별자이기도 하다."
+  },
+  {
+    tag:"관계 선택사항",
+    q:"'회원은 가입만 하고 주문을 하지 않을 수도 있지만, 주문은 반드시 한 명의 회원이 있어야 한다.' 이 상황을 옳게 해석한 것은?",
+    o:["회원 입장에서 주문 관계는 필수 참여다","주문 입장에서 회원 관계는 필수 참여다","양쪽 모두 선택 참여다","회원과 주문은 N : M 관계다"],
+    a:1,
+    e:"주문은 회원 없이 존재할 수 없으므로 주문 쪽에서 회원 관계는 <b>필수</b>, 회원은 주문이 없어도 되므로 회원 쪽에서 주문 관계는 <b>선택</b>이다. ERD에서는 이를 관계선택사항(필수/선택)으로 표기한다."
+  },
+  {
+    tag:"ERD 작성 절차",
+    q:"ERD를 그리면서 엔티티를 도출·배치하고 관계까지 설정했다. 이후 남은 작업의 올바른 순서는?",
+    o:["참여도 표시 → 관계명 부여 → 필수여부 설정","필수여부 설정 → 관계명 부여 → 참여도 표시","관계명 부여 → 필수여부 설정 → 참여도 표시","관계명 부여 → 참여도 표시 → 필수여부 설정"],
+    a:3,
+    e:"ERD 작성 절차: 엔티티 도출 → 배치 → 관계 설정 → <b>관계명 부여 → 참여도 표시 → 필수/선택 설정</b>."
+  }
+];
+
+const KEYS = ["A","B","C","D"];
+const app = document.getElementById("app");
+const seg = document.getElementById("segments");
+const counter = document.getElementById("counter");
+let idx = 0, answers = [], tries = [], solved = [], mode = "intro";
+
+const pad = n => String(n).padStart(2,"0");
+seg.innerHTML = QUIZ.map(()=>"<i></i>").join("");
+
+function paintSegments(){
+  [...seg.children].forEach((el,i)=>{
+    el.className = "";
+    if (mode === "intro") return;
+    if (solved[i]) el.className = tries[i] === 1 ? "done" : "retry";
+    else if (mode === "quiz" && i === idx) el.className = "now";
+  });
+}
+
+function reset(){ idx=0; answers=[]; tries=[]; solved=[]; }
+function go(fn){ fn(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+function intro(){
+  mode = "intro"; paintSegments();
+  counter.innerHTML = `<b>${pad(QUIZ.length)}</b> Questions`;
+  const tags = [...new Set(QUIZ.map(q=>q.tag))];
+  app.innerHTML = `
+    <section class="card intro anim">
+      <div class="eyebrow">Week 11 · Self Check</div>
+      <h1>Data <em>Modeling</em></h1>
+      <div class="ko">데이터 모델링 이해 퀴즈</div>
+      <p>엔티티, 관계, 식별자 개념을 실제 설계 상황에 적용해 보는 문제입니다. 틀리면 맞힐 때까지 다시 고를 수 있고, 점수는 첫 시도 기준입니다.</p>
+
+      <div class="erd">
+        <svg viewBox="0 0 640 120" fill="none" font-family="JetBrains Mono, monospace" font-size="11">
+          <g stroke="#3a3a40">
+            <rect x="8" y="30" width="120" height="60" rx="8" fill="#121214"/>
+            <rect x="260" y="30" width="120" height="60" rx="8" fill="#121214" stroke="#a1a1a7"/>
+            <rect x="512" y="30" width="120" height="60" rx="8" fill="#121214"/>
+            <line x1="8" y1="52" x2="128" y2="52"/><line x1="260" y1="52" x2="380" y2="52" stroke="#a1a1a7"/><line x1="512" y1="52" x2="632" y2="52"/>
+          </g>
+          <g stroke="#68686f">
+            <path class="flow" d="M128 60 H260"/><path class="flow" d="M512 60 H380"/>
+            <path d="M246 60 L260 52 M246 60 L260 68"/>
+            <path d="M394 60 L380 52 M394 60 L380 68"/>
+            <path d="M136 54 V66 M141 54 V66"/><path d="M504 54 V66 M499 54 V66"/>
+          </g>
+          <g fill="#ededed"><text x="20" y="46">주문</text><text x="272" y="46">주문상품</text><text x="524" y="46">상품</text></g>
+          <g fill="#68686f"><text x="20" y="72"># 주문번호</text><text x="272" y="72"># 주문번호</text><text x="272" y="84"># 상품번호</text><text x="524" y="72"># 상품번호</text>
+            <text x="160" y="50" font-size="10">1 : N</text><text x="430" y="50" font-size="10">N : 1</text></g>
+        </svg>
+        <span class="cap">ENTITY · RELATION · IDENTIFIER</span>
+      </div>
+
+      <div class="meta">
+        <div><span>Questions</span><strong>${QUIZ.length}</strong></div>
+        <div><span>Format</span><strong class="ko">4지선다</strong></div>
+        <div><span>Time</span><strong class="ko">약 10분</strong></div>
+      </div>
+
+      <div class="intro-foot">
+        <button class="btn btn-primary" id="start">시작하기 <span class="arr">→</span></button>
+        <span class="hint"><kbd>1</kbd>–<kbd>4</kbd> 선택 · <kbd>Enter</kbd> 다음</span>
+      </div>
+      <div class="topics">${tags.map(t=>`<span class="chip">${t}</span>`).join("")}</div>
+    </section>`;
+  document.getElementById("start").onclick = ()=> go(()=>{ reset(); render(); });
+}
+
+function ctxHTML(ctx){
+  const lines = ctx.split("\n");
+  return lines.map((l,i)=> i===0 ? `<span class="h">${l}</span>` : l).join("\n");
+}
+
+function render(){
+  mode = "quiz";
+  const q = QUIZ[idx];
+  paintSegments();
+  counter.innerHTML = `<b>${pad(idx+1)}</b> / ${pad(QUIZ.length)}`;
+  app.innerHTML = `
+    <section class="card anim">
+      <div class="q-big">${pad(idx+1)}</div>
+      <div class="q-head"><span class="q-tag">${q.tag}</span></div>
+      <div class="q-num">QUESTION ${pad(idx+1)}</div>
+      <h2 class="q-text">${q.q}</h2>
+      ${q.ctx ? `<div class="q-ctx"><div class="bar"><i></i><i></i><i></i></div><pre>${ctxHTML(q.ctx)}</pre></div>` : ""}
+      <ul class="options">
+        ${q.o.map((t,i)=>`<li><button class="opt" data-i="${i}"><span class="key">${KEYS[i]}</span><span class="txt">${t}</span><span class="mark"></span></button></li>`).join("")}
+      </ul>
+      <div class="feedback" id="fb"></div>
+      <div class="actions">
+        <div class="left">
+          <button class="btn btn-ghost" id="restart"><span class="ic">↺</span>처음부터</button>
+          <span class="hint"><kbd>1</kbd>–<kbd>4</kbd> 선택 · <kbd>Enter</kbd> 다음</span>
+        </div>
+        <button class="btn btn-primary" id="next" disabled>${idx === QUIZ.length-1 ? "결과 보기" : "다음"} <span class="arr">→</span></button>
+      </div>
+    </section>`;
+  app.querySelectorAll(".opt").forEach(b=> b.onclick = ()=> choose(+b.dataset.i));
+  document.getElementById("next").onclick = next;
+  document.getElementById("restart").onclick = ()=> go(()=>{ reset(); render(); });
+}
+
+function showFb(fb){ fb.classList.remove("show"); void fb.offsetWidth; fb.classList.add("show"); }
+
+function choose(i){
+  const q = QUIZ[idx];
+  if (solved[idx]) return;
+  const btns = app.querySelectorAll(".opt");
+  if (btns[i].disabled) return;
+  if (answers[idx] === undefined) answers[idx] = i;   // 점수는 첫 시도 기준
+  tries[idx] = (tries[idx] || 0) + 1;
+  const fb = document.getElementById("fb");
+
+  if (i !== q.a){
+    btns[i].classList.add("wrong");
+    btns[i].querySelector(".mark").textContent = "WRONG";
+    btns[i].disabled = true;
+    fb.className = "feedback";
+    fb.innerHTML = `<div class="verdict no"><span class="dot"></span>오답입니다. 남은 보기 중에서 다시 골라 보세요.</div>`;
+    showFb(fb);
+    return;
+  }
+
+  solved[idx] = true;
+  btns.forEach((b,k)=>{
+    b.disabled = true;
+    if (k === q.a){ b.classList.add("correct"); b.querySelector(".mark").textContent = "ANSWER"; }
+    else if (!b.classList.contains("wrong")) b.classList.add("dim");
+  });
+  const first = tries[idx] === 1;
+  fb.className = "feedback ok";
+  fb.innerHTML = `<div class="verdict ${first?"":"no"}"><span class="dot"></span>${first?"정답입니다":`정답입니다 · ${tries[idx]}번째 시도`}</div><p class="explain">${q.e}</p>`;
+  showFb(fb);
+  paintSegments();
+  document.getElementById("next").disabled = false;
+}
+
+function next(){
+  if (!solved[idx]) return;
+  if (idx < QUIZ.length-1) go(()=>{ idx++; render(); });
+  else go(result);
+}
+
+function result(){
+  mode = "result"; paintSegments();
+  const total = QUIZ.length;
+  const score = answers.filter((a,i)=>a===QUIZ[i].a).length;
+  const pct = score / total;
+  const [en, ko] = pct === 1 ? ["Flawless.","모든 개념을 정확히 적용했습니다."]
+    : pct >= .8 ? ["Solid work.","탄탄합니다. 틀린 문항만 다시 확인하면 됩니다."]
+    : pct >= .6 ? ["Getting there.","기본은 잡혀 있습니다. 식별자 파트를 한 번 더 보세요."]
+    : ["Back to the notes.","개념 정리부터 다시 훑어보는 것을 권합니다."];
+  const wrong = QUIZ.map((q,i)=>({q,i,a:answers[i]})).filter(x=>x.a!==x.q.a);
+  const C = 2 * Math.PI * 88;
+  const ticks = Array.from({length:total},(_,i)=>{
+    const ang = (i/total)*2*Math.PI;
+    const x1 = 100 + 98*Math.cos(ang), y1 = 100 + 98*Math.sin(ang);
+    const x2 = 100 + 94*Math.cos(ang), y2 = 100 + 94*Math.sin(ang);
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+  }).join("");
+  counter.innerHTML = `<b>Result</b>`;
+  app.innerHTML = `
+    <section class="card result anim">
+      <div class="label">Your Score</div>
+      <div class="ring">
+        <svg viewBox="0 0 200 200">
+          <g class="ticks" stroke-width="1">${ticks}</g>
+          <circle class="track" cx="100" cy="100" r="88" fill="none" stroke-width="2"/>
+          <circle class="val" id="ringval" cx="100" cy="100" r="88" fill="none" stroke-width="2"
+            stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${C.toFixed(2)}"/>
+        </svg>
+        <div class="center"><div class="num" id="num">0</div><div class="of">OF ${total}</div></div>
+      </div>
+      <div class="grade">${en}</div>
+      <p class="grade-ko">${ko}</p>
+      <div class="stats">
+        <div><span>First Try</span><strong>${score}</strong></div>
+        <div><span>Retried</span><strong>${total - score}</strong></div>
+        <div><span>Accuracy</span><strong>${Math.round(pct*100)}%</strong></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" id="retry">다시 풀기 <span class="arr">↺</span></button>
+        <button class="btn btn-ghost" id="home">처음으로</button>
+      </div>
+      <div class="review">
+        <h3>${wrong.length ? `Missed on first try — ${wrong.length}` : "No misses"}</h3>
+        ${wrong.length ? wrong.map((x,k)=>`
+          <div class="r-item" style="animation-delay:${.05*k}s">
+            <div class="n">${pad(x.i+1)}</div>
+            <div class="rq">${x.q.q}</div>
+            <div class="ra"><span class="lb">FIRST</span><s>${KEYS[x.a]}. ${x.q.o[x.a]}</s><br><span class="lb">ANSWER</span>${KEYS[x.q.a]}. ${x.q.o[x.q.a]}</div>
+          </div>`).join("") : `<p class="perfect">모든 문항을 첫 시도에 맞혔습니다.</p>`}
+      </div>
+    </section>`;
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{
+    document.getElementById("ringval").style.strokeDashoffset = (C * (1 - pct)).toFixed(2);
+  }));
+  const numEl = document.getElementById("num"); const t0 = performance.now();
+  (function tick(t){ const p = Math.min(1,(t-t0)/1200); numEl.textContent = Math.round(score * (1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(tick); })(t0);
+  document.getElementById("retry").onclick = ()=> go(()=>{ reset(); render(); });
+  document.getElementById("home").onclick = ()=> go(intro);
+}
+
+document.addEventListener("keydown", e=>{
+  if (!app.querySelector(".opt")) return;
+  if (["1","2","3","4"].includes(e.key)) choose(+e.key - 1);
+  if (e.key === "Enter") next();
+});
+
+document.addEventListener("mousemove", e=>{
+  const card = app.querySelector(".card"); if (!card) return;
+  const r = card.getBoundingClientRect();
+  card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+  card.style.setProperty("--my", (e.clientY - r.top) + "px");
+});
+
+intro();
+</script>
+</body>
+</html>
